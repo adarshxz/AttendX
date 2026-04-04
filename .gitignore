@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Database (CRITICAL SECURITY)
+attendx.db
+attendx.db-shm
+attendx.db-wal
+
+# Environment Variables
+.env
+.env.local
+
+# OS Specific
+.DS_Store
+Thumbs.db

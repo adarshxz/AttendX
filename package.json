@@ -1,0 +1,17 @@
+{
+  "name": "attendx",
+  "version": "1.0.0",
+  "description": "AttendX – Attendance Planner with SQLite3 backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.6.0",
+    "dotenv": "^17.4.0",
+    "express": "^4.21.0",
+    "uuid": "^10.0.0"
+  }
+}
