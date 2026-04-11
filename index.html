@@ -4,106 +4,118 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AttendX – Attendance Planner</title>
+<meta name="description" content="Track your attendance, overtime, and leaves with AttendX — a modern attendance planner." />
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<!-- Auth Screen -->
-<div id="auth-screen">
-
-  <!-- Left: Form -->
+<!-- ══════════════════════════════════════════ -->
+<!-- Auth Screen                               -->
+<!-- ══════════════════════════════════════════ -->
+<div id="auth-screen" style="display:none;">
+  <!-- Left Panel — Forms -->
   <div class="auth-left">
     <div class="auth-logo">Attend<span>X</span></div>
 
     <!-- Tabs -->
     <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
-      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+      <button class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Log In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
     </div>
 
-    <!-- Sign In Form -->
-    <div class="auth-form" id="form-signin">
-      <div class="auth-error" id="signin-error"></div>
+    <!-- Error -->
+    <div class="auth-error" id="auth-error"></div>
+
+    <!-- Login Form -->
+    <form class="auth-form" id="login-form" onsubmit="handleLogin(event)">
       <div class="field-group">
-        <label>Email</label>
-        <input type="email" id="si-email" placeholder="you@example.com" autocomplete="email"/>
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email" />
       </div>
       <div class="field-group">
-        <label>Password</label>
+        <label for="login-password">Password</label>
         <div class="password-wrap">
-          <input type="password" id="si-password" placeholder="Enter your password" autocomplete="current-password"/>
-          <button class="toggle-pw" onclick="togglePw('si-password',this)" tabindex="-1">👁</button>
+          <input type="password" id="login-password" placeholder="••••••••" required minlength="6" autocomplete="current-password" />
+          <button type="button" class="toggle-pw" onclick="togglePassword('login-password', this)">👁</button>
         </div>
       </div>
-      <button class="btn-primary" onclick="doSignIn()">Sign In →</button>
-    </div>
+      <button type="submit" class="btn-primary" id="login-btn">Log In</button>
+    </form>
 
-    <!-- Sign Up Form -->
-    <div class="auth-form hidden" id="form-signup">
-      <div class="auth-error" id="signup-error"></div>
+    <!-- Signup Form -->
+    <form class="auth-form hidden" id="signup-form" onsubmit="handleSignup(event)">
       <div class="field-group">
-        <label>Full Name</label>
-        <input type="text" id="su-name" placeholder="Your name" maxlength="40" autocomplete="name"/>
+        <label for="signup-name">Full Name</label>
+        <input type="text" id="signup-name" placeholder="John Doe" required minlength="2" autocomplete="name" />
       </div>
       <div class="field-group">
-        <label>Email</label>
-        <input type="email" id="su-email" placeholder="you@example.com" autocomplete="email"/>
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" required autocomplete="email" />
       </div>
       <div class="field-group">
-        <label>Password</label>
+        <label for="signup-password">Password</label>
         <div class="password-wrap">
-          <input type="password" id="su-password" placeholder="Create a password" oninput="checkStrength(this.value)" autocomplete="new-password"/>
-          <button class="toggle-pw" onclick="togglePw('su-password',this)" tabindex="-1">👁</button>
+          <input type="password" id="signup-password" placeholder="Min. 6 characters" required minlength="6" autocomplete="new-password" oninput="updateStrength(this.value)" />
+          <button type="button" class="toggle-pw" onclick="togglePassword('signup-password', this)">👁</button>
         </div>
         <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
         <div class="strength-label" id="strength-label"></div>
       </div>
-      <div class="field-group">
-        <label>Confirm Password</label>
-        <div class="password-wrap">
-          <input type="password" id="su-confirm" placeholder="Repeat password" autocomplete="new-password"/>
-          <button class="toggle-pw" onclick="togglePw('su-confirm',this)" tabindex="-1">👁</button>
-        </div>
-      </div>
-      <button class="btn-primary" onclick="doSignUp()">Create Account →</button>
-    </div>
+      <button type="submit" class="btn-primary" id="signup-btn">Create Account</button>
+    </form>
+
+    <div class="auth-divider" style="margin-top:18px;">SECURE & PRIVATE</div>
   </div>
 
-  <!-- Right: Promo panel -->
+  <!-- Right Panel — Branding -->
   <div class="auth-right">
     <div class="auth-right-content">
-      <h2>Track your time, effortlessly.</h2>
-      <p>AttendX keeps your attendance records organised, accurate, and always available.</p>
+      <h2>Your Attendance, Simplified.</h2>
+      <p>Track attendance, overtime, and leaves — all in one beautifully designed planner.</p>
       <div class="feature-list">
-        <div class="feature-item"><div class="feature-icon">📅</div>Visual calendar with colour-coded status</div>
-        <div class="feature-item"><div class="feature-icon">⏱</div>Automatic overtime hour calculation</div>
-        <div class="feature-item"><div class="feature-icon">📊</div>Live dashboard — Present, Leaves, OT</div>
-        <div class="feature-item"><div class="feature-icon">🔒</div>Your data stays private on your device</div>
+        <div class="feature-item">
+          <div class="feature-icon">📅</div>
+          <span>Interactive calendar with day-by-day tracking</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">⏱</div>
+          <span>Overtime logging with automatic calculations</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📊</div>
+          <span>Monthly dashboard with real-time stats</span>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔒</div>
+          <span>Secure, per-user data stored in the cloud</span>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- App -->
-<div id="app">
+<!-- ══════════════════════════════════════════ -->
+<!-- App (shown after login)                   -->
+<!-- ══════════════════════════════════════════ -->
+<div id="app" style="display: none;">
   <header>
     <div class="logo">Attend<span>X</span></div>
     <div class="user-menu-wrap">
-      <button class="user-menu-btn" onclick="toggleUserMenu()">
-        <div class="user-avatar" id="avatar-initials">U</div>
-        <span id="header-username">User</span>
-        <span style="font-size:10px;color:var(--text3)">▾</span>
+      <button class="user-menu-btn" id="user-menu-btn" onclick="toggleUserMenu()">
+        <div class="user-avatar" id="header-avatar">P</div>
+        <span id="header-username">My Planner</span>
       </button>
       <div class="user-menu-dropdown" id="user-menu-dropdown">
         <div class="user-menu-info">
-          <div class="user-menu-name" id="menu-name"></div>
-          <div class="user-menu-email" id="menu-email"></div>
+          <div class="user-menu-name" id="menu-user-name">—</div>
+          <div class="user-menu-email" id="menu-user-email">—</div>
         </div>
-        <button class="menu-item danger" onclick="doSignOut()">🚪 Sign Out</button>
+        <button class="menu-item danger" onclick="logout()">🚪 Log Out</button>
       </div>
     </div>
   </header>
+
 
   <div class="main-grid">
     <!-- Left: Calendar + Form -->

@@ -1,3 +1,7 @@
+// ══════════════════════════════════════════════
+// AttendX – script.js (with MongoDB auth)
+// ══════════════════════════════════════════════
+
 // ── State ──
 let selectedDate = null;
 let selectedStatus = null;
@@ -15,132 +19,224 @@ function fmtDate(d) {
 const today = new Date();
 const todayStr = fmtDate(today);
 
+// ── Auth Helpers ──
+const TOKEN_KEY = 'attendx_token';
+const USER_KEY = 'attendx_user';
+
+function getToken() {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function setAuth(token, user) {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  currentUser = user;
+}
+
+function clearAuth() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  currentUser = null;
+}
+
+function getSavedUser() {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY));
+  } catch { return null; }
+}
+
+// ── API Call (real fetch to server) ──
 async function apiCall(url, method = 'GET', body = null) {
-  const token = localStorage.getItem('attendx_token');
-  const options = {
+  const token = getToken();
+  const opts = {
     method,
     headers: { 'Content-Type': 'application/json' }
   };
-  if (token) options.headers['Authorization'] = `Bearer ${token}`;
-  if (body) options.body = JSON.stringify(body);
+  if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+  if (body) opts.body = JSON.stringify(body);
 
-  const res = await fetch(url, options);
-  const contentType = res.headers.get('content-type');
-  let data;
-  if (contentType && contentType.includes('application/json')) {
-    data = await res.json();
-  } else {
-    const text = await res.text();
-    throw new Error(text || `Request failed with status ${res.status}`);
+  const res = await fetch(url, opts);
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || 'Request failed');
   }
-  if (!res.ok) throw new Error(data.error || 'Something went wrong');
   return data;
 }
 
-// ── Tab switching ──
-function switchTab(tab) {
-  document.getElementById('form-signin').classList.toggle('hidden', tab !== 'signin');
-  document.getElementById('form-signup').classList.toggle('hidden', tab !== 'signup');
-  document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
-  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
-  clearAuthErrors();
+// ══════════════════════════════════════════════
+// AUTH UI
+// ══════════════════════════════════════════════
+
+function switchAuthTab(tab) {
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
+  const tabLogin = document.getElementById('tab-login');
+  const tabSignup = document.getElementById('tab-signup');
+  const authError = document.getElementById('auth-error');
+
+  authError.classList.remove('visible');
+  authError.textContent = '';
+
+  if (tab === 'login') {
+    loginForm.classList.remove('hidden');
+    signupForm.classList.add('hidden');
+    tabLogin.classList.add('active');
+    tabSignup.classList.remove('active');
+  } else {
+    loginForm.classList.add('hidden');
+    signupForm.classList.remove('hidden');
+    tabLogin.classList.remove('active');
+    tabSignup.classList.add('active');
+  }
 }
 
-function clearAuthErrors() {
-  ['signin-error','signup-error'].forEach(id => {
-    const el = document.getElementById(id);
-    el.classList.remove('visible');
-    el.textContent = '';
-  });
-}
-
-function showAuthError(id, msg) {
-  const el = document.getElementById(id);
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
   el.textContent = msg;
   el.classList.add('visible');
 }
 
-function togglePw(id, btn) {
-  const inp = document.getElementById(id);
-  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
-  else { inp.type = 'password'; btn.textContent = '👁'; }
+function togglePassword(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+  }
 }
 
-function checkStrength(pw) {
+function updateStrength(val) {
   const fill = document.getElementById('strength-fill');
   const label = document.getElementById('strength-label');
   let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const pct = (score / 4) * 100;
-  const colors = ['#dc2626','#ea580c','#ca8a04','#16a34a'];
-  const labels = ['Weak','Fair','Good','Strong'];
-  fill.style.width = pct + '%';
-  fill.style.background = colors[score - 1] || '#e2e0d8';
-  label.textContent = pw.length ? (labels[score - 1] || '') : '';
-  label.style.color = colors[score - 1] || 'var(--text3)';
+  if (val.length >= 6) score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+
+  const levels = [
+    { w: '0%', c: 'var(--border)', t: '' },
+    { w: '20%', c: 'var(--absent)', t: 'Weak' },
+    { w: '40%', c: 'var(--cl)', t: 'Fair' },
+    { w: '60%', c: 'var(--halfday)', t: 'Good' },
+    { w: '80%', c: 'var(--present)', t: 'Strong' },
+    { w: '100%', c: 'var(--present)', t: 'Very Strong' }
+  ];
+  const lv = levels[score];
+  fill.style.width = lv.w;
+  fill.style.background = lv.c;
+  label.textContent = lv.t;
+  label.style.color = lv.c;
 }
 
-// ── Sign Up ──
-async function doSignUp() {
-  const btn = document.querySelector('#form-signup .btn-primary');
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+
   btn.disabled = true;
+  btn.textContent = 'Logging in…';
+
   try {
-    const name    = document.getElementById('su-name').value.trim();
-    const email   = document.getElementById('su-email').value.trim().toLowerCase();
-    const password = document.getElementById('su-password').value;
-    const confirm = document.getElementById('su-confirm').value;
-
-    if (password !== confirm) return showAuthError('signup-error', 'Passwords do not match.');
-
-    const data = await apiCall('/api/signup', 'POST', { name, email, password });
-    localStorage.setItem('attendx_token', data.token);
-    startApp(data);
+    const data = await apiCall('/api/auth/login', 'POST', { email, password });
+    setAuth(data.token, data.user);
+    showApp();
   } catch (err) {
-    showAuthError('signup-error', err.message);
+    showAuthError(err.message);
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Log In';
   }
 }
 
-// ── Sign In ──
-async function doSignIn() {
-  const btn = document.querySelector('#form-signin .btn-primary');
-  btn.disabled = true;
-  try {
-    const email = document.getElementById('si-email').value.trim().toLowerCase();
-    const password = document.getElementById('si-password').value;
+async function handleSignup(e) {
+  e.preventDefault();
+  const btn = document.getElementById('signup-btn');
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
 
-    const data = await apiCall('/api/signin', 'POST', { email, password });
-    localStorage.setItem('attendx_token', data.token);
-    startApp(data);
+  btn.disabled = true;
+  btn.textContent = 'Creating account…';
+
+  try {
+    const data = await apiCall('/api/auth/register', 'POST', { name, email, password });
+    setAuth(data.token, data.user);
+    showApp();
   } catch (err) {
-    showAuthError('signin-error', err.message);
+    showAuthError(err.message);
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Create Account';
   }
 }
 
-// ── Keyboard enter support ──
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  if (!document.getElementById('form-signin').classList.contains('hidden')) doSignIn();
-  else doSignUp();
+function logout() {
+  clearAuth();
+  records = {};
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  // Reset forms
+  document.getElementById('login-form').reset();
+  document.getElementById('signup-form').reset();
+  document.getElementById('auth-error').classList.remove('visible');
+  switchAuthTab('login');
+  closeUserMenu();
+  showToast('Logged out');
+}
+
+// ── User Menu ──
+function toggleUserMenu() {
+  document.getElementById('user-menu-dropdown').classList.toggle('open');
+}
+
+function closeUserMenu() {
+  document.getElementById('user-menu-dropdown').classList.remove('open');
+}
+
+// Close menu on click outside
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('user-menu-btn');
+  const dropdown = document.getElementById('user-menu-dropdown');
+  if (wrap && dropdown && !wrap.contains(e.target) && !dropdown.contains(e.target)) {
+    closeUserMenu();
+  }
 });
 
-// ── Start App ──
-async function startApp(user) {
-  currentUser = user;
+// ══════════════════════════════════════════════
+// APP FLOW
+// ══════════════════════════════════════════════
+
+function showAuthScreen() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+async function showApp() {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  document.getElementById('header-username').textContent = user.name.split(' ')[0];
-  document.getElementById('avatar-initials').textContent = user.name[0].toUpperCase();
-  document.getElementById('menu-name').textContent = user.name;
-  document.getElementById('menu-email').textContent = user.email;
 
-  // Load records from backend
+  // Set user info in header
+  const user = currentUser || getSavedUser();
+  if (user) {
+    currentUser = user;
+    const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+    document.getElementById('header-avatar').textContent = initial;
+    document.getElementById('header-username').textContent = user.name || 'User';
+    document.getElementById('menu-user-name').textContent = user.name || '—';
+    document.getElementById('menu-user-email').textContent = user.email || '—';
+  }
+
+  await startApp();
+}
+
+// ── Start App ──
+async function startApp() {
   try {
     records = await apiCall('/api/records');
   } catch (e) {
@@ -156,48 +252,26 @@ async function startApp(user) {
   selectDate(todayStr);
 }
 
-async function doSignOut() {
-  try { await apiCall('/api/signout', 'POST'); } catch(e) {}
-  localStorage.removeItem('attendx_token');
-  currentUser = null;
-  records = {};
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
-  document.getElementById('user-menu-dropdown').classList.remove('open');
-  document.getElementById('si-email').value = '';
-  document.getElementById('si-password').value = '';
-  clearAuthErrors();
-  switchTab('signin');
-  showToast('Signed out successfully');
-}
-
-function toggleUserMenu() {
-  document.getElementById('user-menu-dropdown').classList.toggle('open');
-}
-document.addEventListener('click', e => {
-  if (!e.target.closest('.user-menu-wrap')) {
-    document.getElementById('user-menu-dropdown')?.classList.remove('open');
-  }
-});
-
 // ── Init ──
-async function init() {
-  const token = localStorage.getItem('attendx_token');
-  if (token) {
-    try {
-      const user = await apiCall('/api/me');
-      startApp(user);
-      return;
-    } catch(e) {
-      localStorage.removeItem('attendx_token');
-    }
-  }
-  document.getElementById('auth-screen').style.display = 'flex';
+function init() {
   calYear = today.getFullYear();
   calMonth = today.getMonth();
+
+  const token = getToken();
+  const user = getSavedUser();
+
+  if (token && user) {
+    currentUser = user;
+    showApp();
+  } else {
+    showAuthScreen();
+  }
 }
 
-// ── Calendar ──
+// ══════════════════════════════════════════════
+// CALENDAR
+// ══════════════════════════════════════════════
+
 function changeMonth(dir) {
   calMonth += dir;
   if (calMonth > 11) { calMonth = 0; calYear++; }
@@ -384,6 +458,11 @@ async function saveEntry() {
     document.getElementById('btn-delete').style.display = 'block';
     showToast('Saved ✓');
   } catch (err) {
+    if (err.message.includes('token') || err.message.includes('Access denied')) {
+      showToast('Session expired. Please log in again.');
+      logout();
+      return;
+    }
     showToast('Failed to save: ' + err.message);
   }
 }
@@ -399,11 +478,19 @@ async function deleteEntry() {
     selectDate(selectedDate);
     showToast('Entry deleted');
   } catch (err) {
+    if (err.message.includes('token') || err.message.includes('Access denied')) {
+      showToast('Session expired. Please log in again.');
+      logout();
+      return;
+    }
     showToast('Failed to delete: ' + err.message);
   }
 }
 
-// ── Stats ──
+// ══════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════
+
 function updateStats() {
   let present=0, leave=0, holiday=0, otMins=0;
   
@@ -428,7 +515,10 @@ function updateStats() {
   document.getElementById('stat-ot').textContent = otMins > 0 ? `${h}h${m>0?m+'m':''}` : '0h';
 }
 
-// ── Records ──
+// ══════════════════════════════════════════════
+// RECORDS TABLE
+// ══════════════════════════════════════════════
+
 function setFilter(f, btn) {
   currentFilter = f;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -497,7 +587,10 @@ function renderRecords() {
   });
 }
 
-// ── Helpers ──
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -507,4 +600,5 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// ── Boot ──
 init();

@@ -1,17 +1,30 @@
 {
-  "name": "attendx",
+  "name": "attendance-planner",
   "version": "1.0.0",
-  "description": "AttendX – Attendance Planner with SQLite3 backend",
-  "main": "server.js",
+  "description": "",
+  "main": "script.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adarshxz/AttendX.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/adarshxz/AttendX/issues"
+  },
+  "homepage": "https://github.com/adarshxz/AttendX#readme",
   "dependencies": {
-    "bcrypt": "^5.1.1",
-    "better-sqlite3": "^11.6.0",
-    "dotenv": "^17.4.0",
-    "express": "^4.21.0",
-    "uuid": "^10.0.0"
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.4.1"
   }
 }
