@@ -24,16 +24,19 @@ app.get('{*path}', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// ── Connect to MongoDB & Start Server ──
+// ── Connect to MongoDB ──
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('\n  ✅ Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`  ✅ AttendX server running at http://localhost:${PORT}\n`);
-    });
-  })
+  .then(() => console.log('\n  ✅ Connected to MongoDB Atlas'))
   .catch(err => {
     console.error('\n  ❌ MongoDB connection failed:', err.message);
-    console.error('  Make sure MongoDB is running on your machine.\n');
-    process.exit(1);
   });
+
+// ── Export App (for Vercel) ──
+module.exports = app;
+
+// ── Start Server Locally ──
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`  ✅ AttendX server running at http://localhost:${PORT}\n`);
+  });
+}
