@@ -45,6 +45,10 @@ router.post('/register', async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email }
     });
   } catch (err) {
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(val => val.message);
+      return res.status(400).json({ error: messages[0] });
+    }
     if (err.code === 11000) {
       return res.status(400).json({ error: 'An account with this email already exists.' });
     }
