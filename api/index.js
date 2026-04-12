@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
-const authRoutes = require('./routes/auth');
-const recordRoutes = require('./routes/records');
+const authRoutes = require('../routes/auth');
+const recordRoutes = require('../routes/records');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,16 +13,11 @@ const PORT = process.env.PORT || 3000;
 // ── Middleware ──
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+// Static files and fallback are handled by Vercel directly
 
 // ── API Routes ──
 app.use('/api/auth', authRoutes);
 app.use('/api/records', recordRoutes);
-
-// ── Fallback — serve index.html for SPA ──
-app.get('{*path}', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
 
 // ── Connect to MongoDB ──
 mongoose.connect(process.env.MONGO_URI)
