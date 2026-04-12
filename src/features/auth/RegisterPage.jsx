@@ -46,8 +46,10 @@ const RegisterPage = () => {
       login(data.user, data.token);
       navigate('/dashboard');
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.response?.data?.error || 'Registration failed.');
     } finally {
+
       setLoading(false);
     }
   };
