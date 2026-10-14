@@ -1,7 +1,7 @@
 {
   "name": "attendance-planner",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.0.1",
+  "description": "Smart attendance planner and tracking web application",
   "main": "server/app.js",
   "scripts": {
     "dev": "vite",
@@ -14,8 +14,14 @@
     "type": "git",
     "url": "git+https://github.com/adarshxz/AttendX.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "attendance",
+    "attendance-planner",
+    "react",
+    "express",
+    "mongodb"
+  ],
+  "author": "adarshxz",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
